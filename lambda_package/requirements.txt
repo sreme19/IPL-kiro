@@ -1,0 +1,8 @@
+fastapi>=0.104.0
+mangum>=0.17.0
+pydantic>=2.5.0
+pulp>=2.7.0
+numpy>=1.24.0
+networkx>=3.2.0
+boto3>=1.34.0
+# Note: pandas and pyarrow omitted - use S3 JSON instead of Parquet for Lambda

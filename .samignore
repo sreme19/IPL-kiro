@@ -1,0 +1,11 @@
+data/
+.pytest_cache/
+*.pyc
+__pycache__/
+.git/
+.gitignore
+.env
+.DS_Store
+node_modules/
+.aws-sam/
+dist/

@@ -1,0 +1,28 @@
+# .kiro/hooks.yaml
+# Kiro runs these automatically on file save and commit.
+
+hooks:
+  on_save:
+    - pattern: "api/**/*.py"
+      action: run_command
+      command: "cd api && python -m pytest tests/ -q --tb=short 2>&1 | tail -20"
+      label: "Backend tests"
+
+    - pattern: "src/**/*.tsx"
+      action: run_command
+      command: "npm run type-check 2>&1 | tail -10"
+      label: "TypeScript check"
+
+    - pattern: "scripts/**/*.py"
+      action: run_command
+      command: "cd scripts && python -m pytest tests/ -q --tb=short 2>&1 | tail -10"
+      label: "Pipeline script tests"
+
+  on_commit:
+    - action: run_command
+      command: "npm run lint && cd api && ruff check . 2>&1"
+      label: "Lint (frontend + backend)"
+
+    - action: run_command
+      command: "python scripts/check_gate.py --stage-auto"
+      label: "Gate check"

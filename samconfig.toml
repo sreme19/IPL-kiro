@@ -1,0 +1,22 @@
+version = 0.1
+[staging]
+[staging.deploy]
+[staging.deploy.parameters]
+stack_name = "ipl-kiro-staging"
+s3_bucket = "ipl-kiro-deployments"
+s3_prefix = "ipl-kiro-staging"
+region = "us-west-2"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Environment=staging"
+
+[production]
+[production.deploy]
+[production.deploy.parameters]
+stack_name = "ipl-kiro-production"
+s3_bucket = "ipl-kiro-deployments"
+s3_prefix = "ipl-kiro-production"
+region = "us-west-2"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Environment=production"

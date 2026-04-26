@@ -1,0 +1,116 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: IPL Captain Simulator - FastAPI Backend with React Frontend
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: python3.9
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        LOG_LEVEL: INFO
+
+Parameters:
+  Environment:
+    Type: String
+    Default: staging
+    AllowedValues:
+      - staging
+      - production
+  PostHogKey:
+    Type: String
+    Default: ''
+    NoEcho: true
+
+Resources:
+  # DynamoDB Table for Sessions
+  SessionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'ipl-kiro-sessions-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: session_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: session_id
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      Tags:
+        - Key: Project
+          Value: ipl-kiro
+        - Key: Environment
+          Value: !Ref Environment
+
+  # S3 Bucket for Data Storage
+  DataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'ipl-kiro-data-${Environment}-${AWS::AccountId}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Project
+          Value: ipl-kiro
+        - Key: Environment
+          Value: !Ref Environment
+
+  # FastAPI Backend Lambda Function
+  FastAPIFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'ipl-kiro-api-${Environment}'
+      Handler: api.main.handler
+      CodeUri: lambda_package/
+      Description: FastAPI backend for IPL Captain Simulator
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref SessionsTable
+          S3_BUCKET: !Ref DataBucket
+          POSTHOG_KEY: !Ref PostHogKey
+          ENVIRONMENT: !Ref Environment
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SessionsTable
+        - S3ReadPolicy:
+            BucketName: !Ref DataBucket
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            RestApiId: !Ref ApiGatewayApi
+
+  # API Gateway
+  ApiGatewayApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub 'ipl-kiro-api-${Environment}'
+      StageName: !Ref Environment
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Api-Key'"
+        AllowOrigin: "'*'"
+      Tags:
+        Project: ipl-kiro
+        Environment: !Ref Environment
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${ApiGatewayApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/'
+  SessionsTable:
+    Description: DynamoDB Sessions Table
+    Value: !Ref SessionsTable
+  DataBucket:
+    Description: S3 Data Bucket
+    Value: !Ref DataBucket

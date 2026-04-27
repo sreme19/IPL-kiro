@@ -24,37 +24,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-asyncio pytest-cov httpx
-
-      - name: Create log directories
-        run: mkdir -p logs/pytest
-
-      - name: Run unit tests
-        run: pytest api/tests/ -v -m unit --junit-xml=logs/pytest/unit.xml
-
-      - name: Run functional tests
-        run: pytest api/tests/ -v -m functional --junit-xml=logs/pytest/functional.xml
-
-      - name: Run regression tests
-        run: pytest api/tests/ -v -m regression --junit-xml=logs/pytest/regression.xml
-
-      - name: Run all tests with coverage + combined log
-        run: |
-          pytest api/tests/ -v \
-            --cov=api \
-            --cov-report=html:logs/pytest/coverage \
-            --cov-report=term-missing \
-            --junit-xml=logs/pytest/junit.xml \
-            --log-file=logs/pytest/run.log \
-            --log-file-level=DEBUG
-
-      - name: Upload backend test logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-test-logs-${{ github.run_number }}
-          path: logs/pytest/
-          retention-days: 30
+          pip install pytest
+      
+      - name: Run backend tests
+        run: pytest api/tests/ -v
 
   test-frontend:
     runs-on: ubuntu-latest

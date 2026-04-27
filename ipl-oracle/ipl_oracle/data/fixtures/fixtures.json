@@ -1,0 +1,85 @@
+{
+  "season": 2026,
+  "fixtures": [
+    {
+      "match_id": "2026-IPL-01",
+      "match_date": "2026-03-21",
+      "home_team": "MI",
+      "away_team": "CSK",
+      "venue": "Wankhede Stadium",
+      "season": 2026
+    },
+    {
+      "match_id": "2026-IPL-12",
+      "match_date": "2026-04-15",
+      "home_team": "RCB",
+      "away_team": "PBKS",
+      "venue": "M Chinnaswamy Stadium",
+      "season": 2026
+    },
+    {
+      "match_id": "2026-IPL-13",
+      "match_date": "2026-04-18",
+      "home_team": "PBKS",
+      "away_team": "DC",
+      "venue": "Punjab Cricket Association IS Bindra Stadium",
+      "season": 2026
+    },
+    {
+      "match_id": "2026-IPL-14",
+      "match_date": "2026-04-21",
+      "home_team": "KKR",
+      "away_team": "RCB",
+      "venue": "Eden Gardens",
+      "season": 2026
+    },
+    {
+      "match_id": "2026-IPL-15",
+      "match_date": "2026-04-24",
+      "home_team": "MI",
+      "away_team": "RR",
+      "venue": "Wankhede Stadium",
+      "season": 2026
+    },
+    {
+      "match_id": "2026-IPL-16",
+      "match_date": "2026-04-28",
+      "home_team": "CSK",
+      "away_team": "RCB",
+      "venue": "MA Chidambaram Stadium",
+      "season": 2026
+    },
+    {
+      "match_id": "2026-IPL-17",
+      "match_date": "2026-05-02",
+      "home_team": "RCB",
+      "away_team": "MI",
+      "venue": "M Chinnaswamy Stadium",
+      "season": 2026
+    },
+    {
+      "match_id": "2026-IPL-18",
+      "match_date": "2026-05-05",
+      "home_team": "PBKS",
+      "away_team": "MI",
+      "venue": "Punjab Cricket Association IS Bindra Stadium",
+      "season": 2026
+    },
+    {
+      "match_id": "2026-IPL-19",
+      "match_date": "2026-05-08",
+      "home_team": "SRH",
+      "away_team": "CSK",
+      "venue": "Rajiv Gandhi International Stadium",
+      "season": 2026
+    },
+    {
+      "match_id": "2026-IPL-20",
+      "match_date": "2026-05-12",
+      "home_team": "GT",
+      "away_team": "LSG",
+      "venue": "Narendra Modi Stadium",
+      "season": 2026
+    }
+  ]
+}

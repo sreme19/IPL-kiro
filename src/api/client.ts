@@ -86,6 +86,47 @@ export interface XIRecommendationResponse {
   solve_time_ms: number
 }
 
+export type AppMode = 'upcoming' | 'historical'
+
+export const IPL_SEASONS = [2024, 2023, 2022, 2021, 2020] as const
+export type IplSeason = (typeof IPL_SEASONS)[number]
+
+export interface HistoricalMatch {
+  match_id: string
+  season: number
+  date: string
+  leg: 'home' | 'away'
+  venue: string
+  city: string
+  host: string
+  guest: string
+  team1_score: string
+  team2_score: string
+  winner: string
+  margin: string
+}
+
+export interface HistoricalMatchesResponse {
+  team1: string
+  team2: string
+  season: number
+  matches: HistoricalMatch[]
+  venues: string[]
+  available_seasons: number[]
+  source: string
+}
+
+export async function fetchHistoricalMatches(
+  team1: string,
+  team2: string,
+  season: number,
+): Promise<HistoricalMatchesResponse> {
+  const res = await api.get<HistoricalMatchesResponse>('/match/historical', {
+    params: { team1, team2, season },
+  })
+  return res.data
+}
+
 // ─── Static squad data (used when backend is unavailable) ─────────────────────
 
 export const SQUADS: Squad[] = [

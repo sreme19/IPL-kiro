@@ -14,8 +14,9 @@ import sys
 import subprocess
 import pytest
 
-# ── Make the api/ package importable from any working directory ────────────────
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+# Insert the REPO ROOT so `import api` works the same way it does in Lambda
+# (handler `api.main.handler` runs from a zip where api/ is a top-level package).
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 logger = logging.getLogger("ipl_kiro.tests")
 
@@ -79,7 +80,7 @@ def full_squad():
     tests.  Any model schema change that breaks this fixture will surface
     immediately in all three test categories.
     """
-    from models.schemas import Player, PlayerRole
+    from api.models.schemas import Player, PlayerRole
 
     return [
         Player(player_id="p1",  name="Batsman 1",      role=PlayerRole.BATSMAN,       is_overseas=False, expected_runs=1.2, expected_wickets=0.0,  form_score=1.0),
@@ -111,7 +112,7 @@ def fastapi_client():
     Used by functional tests to hit real routes without a network.
     """
     import sys, os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
     from fastapi.testclient import TestClient
-    from main import app
+    from api.main import app
     return TestClient(app)

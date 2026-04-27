@@ -11,7 +11,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from models.monte_carlo import MonteCarloSimulator
+from api.models.monte_carlo import MonteCarloSimulator
 
 pytestmark = pytest.mark.unit
 

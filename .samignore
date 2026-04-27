@@ -1,4 +1,6 @@
-data/
+# SAM excludes (relative to CodeUri = lambda_package/).
+# data/ is intentionally NOT listed — api/routers/matches.py loads data/ipl.duckdb
+# at runtime and it must ship inside the Lambda zip.
 .pytest_cache/
 *.pyc
 __pycache__/

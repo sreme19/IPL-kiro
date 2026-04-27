@@ -8,13 +8,13 @@ from fastapi import APIRouter, HTTPException
 from typing import Dict, Any
 import uuid
 
-from models.schemas import XIConfirmation, MatchResult
-from models.session_store import SessionStore
-from models.scout_agent import ScoutAgent
-from models.conditions_agent import ConditionsAgent
-from models.opponent_agent import OpponentAgent
-from models.ilp_solver import ILPSolver
-from models.monte_carlo import MonteCarloSimulator
+from api.models.schemas import XIConfirmation, MatchResult
+from api.models.session_store import SessionStore
+from api.models.scout_agent import ScoutAgent
+from api.models.conditions_agent import ConditionsAgent
+from api.models.opponent_agent import OpponentAgent
+from api.models.ilp_solver import ILPSolver
+from api.models.monte_carlo import MonteCarloSimulator
 
 router = APIRouter()
 

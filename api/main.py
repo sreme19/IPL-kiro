@@ -8,7 +8,7 @@ import os
 from fastapi import FastAPI
 from mangum import Mangum
 
-from routers import simulation, match, tournament, stats, matches
+from api.routers import simulation, match, tournament, stats, matches
 
 app = FastAPI(
     title="IPL Captain Simulator API",

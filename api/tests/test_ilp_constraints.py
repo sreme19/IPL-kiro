@@ -9,8 +9,8 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from models.ilp_solver import ILPSolver
-from models.schemas import Player, PlayerRole
+from api.models.ilp_solver import ILPSolver
+from api.models.schemas import Player, PlayerRole
 
 pytestmark = pytest.mark.unit
 

@@ -104,6 +104,14 @@ jobs:
       - name: Set up SAM CLI
         uses: aws-actions/setup-sam@v2
 
+      - name: Assemble lambda_package
+        run: |
+          rm -rf lambda_package
+          mkdir -p lambda_package
+          cp -r api lambda_package/
+          cp -r data lambda_package/
+          cp requirements.txt lambda_package/
+
       - name: Build SAM application
         run: sam build --use-container
 
@@ -134,6 +142,14 @@ jobs:
 
       - name: Set up SAM CLI
         uses: aws-actions/setup-sam@v2
+
+      - name: Assemble lambda_package
+        run: |
+          rm -rf lambda_package
+          mkdir -p lambda_package
+          cp -r api lambda_package/
+          cp -r data lambda_package/
+          cp requirements.txt lambda_package/
 
       - name: Build SAM application
         run: sam build --use-container

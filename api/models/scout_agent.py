@@ -12,7 +12,7 @@ import logging
 from typing import Dict, List, Optional
 from botocore.exceptions import ClientError
 
-from .schemas import Player
+from api.models.schemas import Player
 
 logger = logging.getLogger(__name__)
 

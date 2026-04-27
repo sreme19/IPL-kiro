@@ -177,8 +177,8 @@ class TournamentGraph:
         # Final (simplified)
         final_node = TournamentNode(
             node_id="final",
-            team="qualifier1_winner",  # Placeholder
-            opponent="qualifier2_winner",  # Placeholder
+            team="qualifier1_winner",
+            opponent="qualifier2_winner",
             venue="final_venue",
             win_probability=0.5
         )

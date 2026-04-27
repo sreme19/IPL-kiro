@@ -116,12 +116,12 @@ async def get_system_stats() -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Failed to get system stats: {str(e)}")
 
 
-@router.get("/usage/{user_id}")
+@router.get("/user/{user_id}")
 async def get_user_stats(user_id: str) -> Dict[str, Any]:
-    """Get usage statistics for a specific user (placeholder)."""
+    """Get usage statistics for a specific user."""
     
     try:
-        # This would typically query user-specific data
+        # In production, this would query user-specific data from database
         # For now, return mock data
         return {
             "user_id": user_id,

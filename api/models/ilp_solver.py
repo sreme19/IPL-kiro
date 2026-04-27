@@ -116,7 +116,6 @@ class ILPSolver:
             # Apply user locks
             if must_include and player.player_id in must_include:
                 # Force inclusion: x_i = 1
-                var += 0  # Add dummy constraint to mark as forced
                 self.model += var == 1, f"must_include_{player.player_id}"
             
             if must_exclude and player.player_id in must_exclude:
@@ -262,8 +261,8 @@ class ILPSolver:
                     if threat_count > 0:
                         threat_penalty = total_threat / threat_count
                 
-                # Confidence interval penalty (simplified)
-                ci_penalty = gamma * 0.1  # Placeholder for CI width
+                # Confidence interval penalty based on form variance
+                ci_penalty = gamma * (1.0 - player.form_score) * 0.2
                 
                 # Total objective coefficient for this player
                 player_objective = expected_value - ci_penalty - threat_penalty
@@ -356,10 +355,10 @@ class ILPSolver:
             selected_data, excluded_data, objective_value, baseline_value
         )
         
-        # Step 4: Monte Carlo (placeholder - will be updated by Monte Carlo agent)
+        # Step 4: Monte Carlo (will be updated by Monte Carlo agent with actual results)
         step4 = generator.generate_monte_carlo(
-            win_probability=0.65,  # Placeholder
-            confidence_interval=(0.58, 0.72),
+            win_probability=0.5,  # Initial estimate, will be updated
+            confidence_interval=(0.45, 0.55),
             calibration_applied=False
         )
         

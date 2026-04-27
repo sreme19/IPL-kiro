@@ -42,3 +42,7 @@ htmlcov/
 # Frontend build
 dist/
 build/
+
+# Project-specific
+.kiro/
+lambda_package/

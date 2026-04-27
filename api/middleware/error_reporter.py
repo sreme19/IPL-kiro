@@ -183,7 +183,7 @@ This is a server error affecting user experience. Priority: Urgent.
                 title=title,
                 description=description,
                 priority_id="1",  # Urgent priority
-                state_id="1"     # Todo/Backlog state
+                state_id="1"     # Backlog state
             )
             
             print(f"Created Linear ticket: {issue.id} - {title}")

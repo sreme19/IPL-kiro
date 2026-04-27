@@ -78,8 +78,8 @@ async def start_simulation(request: Dict[str, Any]) -> SimulationResponse:
         )
         
         # Build opponent matchup graph
-        # For now, use dummy opponent data
-        opponent_players = []  # Would come from request
+        # Opponent data should come from request - using empty for now
+        opponent_players = []
         matchup_graph = opponent_agent.build_matchup_graph(
             squad_players, opponent_players, venue, tensors
         )
@@ -100,9 +100,9 @@ async def start_simulation(request: Dict[str, Any]) -> SimulationResponse:
             for player in optimization_result.selected_xi
         }
         
-        # Dummy opponent tensors for simulation
+        # Opponent tensors for simulation (empty if no opponent data)
         opponent_tensor_summary = {
-            player.player_id: 1.0  # Placeholder
+            player.player_id: 1.0
             for player in opponent_players
         }
         

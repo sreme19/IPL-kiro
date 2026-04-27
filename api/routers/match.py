@@ -207,9 +207,10 @@ async def record_match_result(request: Dict[str, Any]) -> Dict[str, Any]:
         
         # Update form vector based on actual performance
         if actual_win:
-            # Update form for winning team (simplified)
+            # Update form for winning team (simplified - would use actual player IDs)
             form_updates = {}
-            for player_id in range(11):  # Placeholder player IDs
+            # In production, this would use actual player IDs from the match
+            for player_id in range(11):
                 form_updates[f"player_{player_id}"] = 1.1  # Boost form
             session_store.update_form_vector(simulation_id, form_updates)
         

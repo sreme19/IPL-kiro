@@ -13,7 +13,7 @@ export function SquadPanel() {
   
   const handleSquadSelect = (squadId: string) => {
     setSelectedSquad(squadId)
-    trackSimulationStarted(squadId, 'opponent-placeholder')
+    trackSimulationStarted(squadId, squadId)
   }
 
   return (

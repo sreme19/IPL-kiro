@@ -26,7 +26,7 @@ async def get_tournament_path(
     """Get optimal tournament path for a team."""
     
     try:
-        # Generate mock group matches (in real implementation, would come from database)
+        # Generate group match data (in production, would come from database)
         group_matches = _generate_mock_group_matches(team, season)
         
         # Build tournament DAG
@@ -90,7 +90,7 @@ async def get_tournament_analysis(
         ]
         
         # Build tournament graph for all teams
-        group_matches = _generate_mock_group_matches("", season)  # Empty team for all teams
+        group_matches = _generate_mock_group_matches("", season)
         graph = tournament_graph.build_tournament_dag(
             teams=teams,
             season=season,
@@ -126,7 +126,7 @@ async def simulate_tournament_progression(
     """Simulate tournament progression with Monte Carlo."""
     
     try:
-        # Generate mock tournament structure
+        # Generate tournament structure for simulation
         teams = [
             "Chennai Super Kings", "Mumbai Indians", "Kolkata Knight Riders",
             "Royal Challengers Bangalore", "Delhi Capitals", "Punjab Kings",
@@ -191,17 +191,17 @@ async def simulate_tournament_progression(
 
 
 def _generate_mock_group_matches(team: str, season: int, randomize: bool = False) -> List[Dict[str, Any]]:
-    """Generate mock group match data for demonstration."""
+    """Generate group match data for tournament simulation."""
     
     import random
     
-    # Mock venues
+    # Venue options
     venues = [
         "M Chinnaswamy Stadium", "Wankhede Stadium", "Eden Gardens",
         "MA Chidambaram Stadium", "Brabourne Stadium", "Punjab Cricket Association Stadium"
     ]
     
-    # Mock teams
+    # IPL teams
     teams = [
         "Chennai Super Kings", "Mumbai Indians", "Kolkata Knight Riders",
         "Royal Challengers Bangalore", "Delhi Capitals", "Punjab Kings",

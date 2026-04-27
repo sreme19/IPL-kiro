@@ -1,19 +1,27 @@
 import { useEffect, useState } from 'react'
-import {
-  VENUES,
-  IPL_SEASONS,
-  fetchHistoricalMatches,
-  type FormationBias,
-  type AppMode,
-} from '../api/client'
+import { VENUES, IPL_SEASONS, type FormationBias, type HistoricalMatch, api } from '../api/client'
+
+// Teams that only joined IPL after a certain season
+const TEAM_DEBUT: Record<string, number> = {
+  'Gujarat Titans': 2022,
+  'Lucknow Super Giants': 2022,
+  'Rising Pune Supergiant': 2016,
+  'Gujarat Lions': 2016,
+  'Pune Warriors': 2011,
+  'Kochi Tuskers Kerala': 2011,
+}
+
+const CURRENT_YEAR = new Date().getFullYear()
+// Upcoming mode: current season + 1 future season
+const UPCOMING_SEASONS = IPL_SEASONS.filter(y => y >= CURRENT_YEAR - 1)
 
 interface Props {
-  mode: AppMode
-  squadId: string | null
-  opponentId: string | null
   selectedVenue: string
   formationBias: FormationBias
-  season: number
+  selectedSeason: number
+  mode: 'upcoming' | 'historical'
+  teamName?: string
+  opponentName?: string
   onVenueSelect: (venue: string) => void
   onFormationChange: (bias: FormationBias) => void
   onSeasonChange: (season: number) => void
@@ -26,111 +34,125 @@ const TYPE_LABEL: Record<string, string> = {
 }
 
 export function VenuePanel({
-  mode,
-  squadId,
-  opponentId,
-  selectedVenue,
-  formationBias,
-  season,
-  onVenueSelect,
-  onFormationChange,
-  onSeasonChange,
+  selectedVenue, formationBias, selectedSeason, mode,
+  teamName, opponentName,
+  onVenueSelect, onFormationChange, onSeasonChange,
 }: Props) {
   const venue = VENUES.find(v => v.name === selectedVenue)
-  const isHistorical = mode === 'historical'
+  const [fixtures, setFixtures] = useState<HistoricalMatch[]>([])
+  const [loadingFixtures, setLoadingFixtures] = useState(false)
+  const [selectedFixtureId, setSelectedFixtureId] = useState<string>('')
 
-  const [historicalVenues, setHistoricalVenues] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
-  const [loadError, setLoadError] = useState(false)
+  // Compute available seasons based on mode + selected teams
+  const availableSeasons = (() => {
+    if (mode === 'upcoming') return UPCOMING_SEASONS
+
+    // Historical: all seasons where both selected teams existed
+    const teamDebut = teamName ? (TEAM_DEBUT[teamName] ?? 2008) : 2008
+    const oppDebut = opponentName ? (TEAM_DEBUT[opponentName] ?? 2008) : 2008
+    const earliest = Math.max(teamDebut, oppDebut)
+    return [...IPL_SEASONS].filter(y => y <= CURRENT_YEAR && y >= earliest).reverse()
+  })()
+
+  // Clamp selected season into the available list whenever it changes
+  useEffect(() => {
+    if (!availableSeasons.includes(selectedSeason)) {
+      onSeasonChange(availableSeasons[0])
+    }
+  }, [mode, teamName, opponentName]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // In historical mode with both teams set, fetch actual match fixtures
+  const showFixturePicker = mode === 'historical' && !!teamName && !!opponentName
 
   useEffect(() => {
-    if (!isHistorical) {
-      setHistoricalVenues([])
-      setLoadError(false)
+    if (!showFixturePicker) {
+      setFixtures([])
+      setSelectedFixtureId('')
       return
     }
-    if (!squadId || !opponentId) {
-      setHistoricalVenues([])
-      setLoadError(false)
-      return
-    }
+
     let cancelled = false
-    setLoading(true)
-    setLoadError(false)
-    fetchHistoricalMatches(squadId, opponentId, season)
-      .then(data => {
+    setLoadingFixtures(true)
+    api
+      .get('/matches/list', {
+        params: { team: teamName, opponent: opponentName, season: selectedSeason, limit: 50 },
+      })
+      .then(res => {
         if (cancelled) return
-        setHistoricalVenues(data.venues)
-        if (selectedVenue && !data.venues.includes(selectedVenue)) {
+        const list: HistoricalMatch[] = res.data.matches ?? []
+        setFixtures(list)
+        if (list.length > 0) {
+          setSelectedFixtureId(list[0].match_id)
+          onVenueSelect(list[0].venue)
+        } else {
+          setSelectedFixtureId('')
           onVenueSelect('')
         }
       })
       .catch(() => {
-        if (cancelled) return
-        setHistoricalVenues([])
-        setLoadError(true)
+        if (!cancelled) setFixtures([])
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setLoadingFixtures(false)
       })
-    return () => {
-      cancelled = true
-    }
-  }, [isHistorical, squadId, opponentId, season, selectedVenue, onVenueSelect])
 
-  const venueOptions = isHistorical
-    ? VENUES.filter(v => historicalVenues.includes(v.name))
-    : VENUES
+    return () => { cancelled = true }
+  }, [showFixturePicker, teamName, opponentName, selectedSeason]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const showEmptyVenueState =
-    isHistorical && !loading && !loadError && squadId && opponentId && historicalVenues.length === 0
+  const handleFixtureChange = (matchId: string) => {
+    setSelectedFixtureId(matchId)
+    const match = fixtures.find(f => f.match_id === matchId)
+    if (match) onVenueSelect(match.venue)
+  }
+
+  const seasonLabel = mode === 'upcoming' ? 'Season (upcoming)' : 'Season (historical)'
 
   return (
     <div className="panel" data-testid="venue-panel">
-      <h2>{isHistorical ? '3. Venue & Season' : '3. Venue & Formation'}</h2>
+      <h2>3. Venue & Formation</h2>
       <div className="panel-content">
-        {isHistorical && (
-          <>
-            <label className="field-label">Season (Historical)</label>
-            <select
-              value={season}
-              onChange={e => onSeasonChange(Number(e.target.value))}
-              data-testid="season-select"
-            >
-              {IPL_SEASONS.map(s => (
-                <option key={s} value={s}>IPL {s}</option>
-              ))}
-            </select>
-          </>
-        )}
-
-        <label className="field-label" style={{ marginTop: isHistorical ? '0.75rem' : 0 }}>
-          Match Venue
-        </label>
+        <label className="field-label">{seasonLabel}</label>
         <select
-          value={selectedVenue}
-          onChange={e => onVenueSelect(e.target.value)}
-          disabled={isHistorical && (!squadId || !opponentId)}
-          data-testid="venue-select"
+          value={selectedSeason}
+          onChange={e => onSeasonChange(Number(e.target.value))}
+          data-testid="season-select"
         >
-          <option value="">— Select venue —</option>
-          {venueOptions.map(v => (
-            <option key={v.name} value={v.name}>{v.name}, {v.city}</option>
+          {availableSeasons.map(y => (
+            <option key={y} value={y}>IPL {y}</option>
           ))}
         </select>
 
-        {isHistorical && loading && (
-          <p className="hint" data-testid="venue-loading">Loading historical venues…</p>
-        )}
-        {isHistorical && loadError && (
-          <p className="hint warning" data-testid="venue-load-error">
-            Could not load historical venues
-          </p>
-        )}
-        {showEmptyVenueState && (
-          <p className="hint" data-testid="venue-empty">
-            No matches found for this combination
-          </p>
+        <label className="field-label" style={{ marginTop: '1rem' }}>Match Venue</label>
+
+        {showFixturePicker ? (
+          loadingFixtures ? (
+            <div className="fixture-loading">Loading matches…</div>
+          ) : fixtures.length > 0 ? (
+            <select
+              value={selectedFixtureId}
+              onChange={e => handleFixtureChange(e.target.value)}
+              data-testid="fixture-select"
+            >
+              {fixtures.map(f => (
+                <option key={f.match_id} value={f.match_id}>
+                  {f.date} — {f.venue} ({f.result === 'won' ? '✓ Won' : '✗ Lost'})
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="fixture-empty">No matches found for this combination</div>
+          )
+        ) : (
+          <select
+            value={selectedVenue}
+            onChange={e => onVenueSelect(e.target.value)}
+            data-testid="venue-select"
+          >
+            <option value="">— Select venue —</option>
+            {VENUES.map(v => (
+              <option key={v.name} value={v.name}>{v.name}, {v.city}</option>
+            ))}
+          </select>
         )}
 
         {venue && (

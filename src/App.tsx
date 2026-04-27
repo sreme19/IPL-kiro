@@ -5,23 +5,15 @@ import { VenuePanel } from './panels/VenuePanel'
 import { ILPPanel } from './panels/ILPPanel'
 import { MonteCarloPanel } from './panels/MonteCarloPanel'
 import { CommentaryPanel } from './panels/CommentaryPanel'
-import { HistoryPanel } from './panels/HistoryPanel'
+import { MatchHistoryPanel } from './panels/MatchHistoryPanel'
 import { trackPageView } from './analytics/events'
-import {
-  type Squad,
-  type FormationBias,
-  type SimulationResponse,
-  type AppMode,
-  IPL_SEASONS,
-} from './api/client'
+import { SQUADS, type Squad, type FormationBias, type SimulationResponse, type HistoricalMatch } from './api/client'
 import './App.css'
 
 function App() {
-  const [mode, setMode] = useState<AppMode>('upcoming')
   const [selectedSquad, setSelectedSquad] = useState<Squad | null>(null)
   const [selectedOpponent, setSelectedOpponent] = useState<Squad | null>(null)
   const [selectedVenue, setSelectedVenue] = useState<string>('')
-  const [season, setSeason] = useState<number>(IPL_SEASONS[1]) // default 2023
   const [formationBias, setFormationBias] = useState<FormationBias>('balanced')
   const [selectedSeason, setSelectedSeason] = useState<number>(2024)
   const [simulationResult, setSimulationResult] = useState<SimulationResponse | null>(null)
@@ -33,16 +25,24 @@ function App() {
     trackPageView('main-dashboard')
   }, [])
 
-  const switchMode = (next: AppMode) => {
-    if (next === mode) return
-    setMode(next)
-    setSelectedVenue('')
+  const handleReplayMatch = (match: HistoricalMatch) => {
+    setReplayMatch(match)
+    setSelectedSeason(match.season)
+    setSelectedVenue(match.venue)
+    // Pre-fill opponent if we have a matching squad
+    const opponent = SQUADS.find(s => s.id === match.opponent_squad_id)
+    if (opponent) setSelectedOpponent(opponent)
+    // Clear any previous result
     setSimulationResult(null)
     setSimulationId(null)
   }
 
-  const isHistorical = mode === 'historical'
-  const venueLabel = isHistorical ? '3 Venue & Season' : '3 Venue'
+  const handleModeSwitch = (next: 'upcoming' | 'historical') => {
+    setMode(next)
+    if (next === 'upcoming') {
+      setReplayMatch(null)
+    }
+  }
 
   return (
     <div className="app">
@@ -55,18 +55,16 @@ function App() {
       </header>
 
       <main className="app-main">
-        <div className="mode-toggle" data-testid="mode-toggle">
+        <div className="mode-toggle">
           <button
             className={`mode-btn ${mode === 'upcoming' ? 'active' : ''}`}
-            onClick={() => switchMode('upcoming')}
-            data-testid="mode-upcoming"
+            onClick={() => handleModeSwitch('upcoming')}
           >
             Upcoming Match
           </button>
           <button
             className={`mode-btn ${mode === 'historical' ? 'active' : ''}`}
-            onClick={() => switchMode('historical')}
-            data-testid="mode-historical"
+            onClick={() => handleModeSwitch('historical')}
           >
             Historical Replay
           </button>
@@ -77,7 +75,7 @@ function App() {
           <span className="arrow">→</span>
           <span className={selectedOpponent ? 'step done' : 'step'}>2 Opponent</span>
           <span className="arrow">→</span>
-          <span className={selectedVenue ? 'step done' : 'step'}>{venueLabel}</span>
+          <span className={selectedVenue ? 'step done' : 'step'}>3 Venue &amp; Season</span>
           <span className="arrow">→</span>
           <span className={simulationResult ? 'step done' : 'step'}>4 Optimize</span>
           <span className="arrow">→</span>
@@ -95,31 +93,32 @@ function App() {
             onOpponentSelect={setSelectedOpponent}
           />
           <VenuePanel
-            mode={mode}
-            squadId={selectedSquad?.id ?? null}
-            opponentId={selectedOpponent?.id ?? null}
             selectedVenue={selectedVenue}
             formationBias={formationBias}
-            season={season}
+            selectedSeason={selectedSeason}
+            mode={mode}
+            teamName={selectedSquad?.name}
+            opponentName={selectedOpponent?.name}
             onVenueSelect={setSelectedVenue}
             onFormationChange={setFormationBias}
-            onSeasonChange={setSeason}
+            onSeasonChange={setSelectedSeason}
           />
-          {isHistorical && (
-            <HistoryPanel
-              squadId={selectedSquad?.id ?? null}
-              opponentId={selectedOpponent?.id ?? null}
-              season={season}
-              selectedVenue={selectedVenue}
-              onVenueSelect={setSelectedVenue}
+
+          {mode === 'historical' && (
+            <MatchHistoryPanel
+              selectedSquad={selectedSquad}
+              season={selectedSeason}
+              onReplayMatch={handleReplayMatch}
+              activeReplayMatchId={replayMatch?.match_id ?? null}
             />
           )}
+
           <ILPPanel
             squad={selectedSquad}
             opponent={selectedOpponent}
             venue={selectedVenue}
             formationBias={formationBias}
-            season={season}
+            season={selectedSeason}
             simulationResult={simulationResult}
             onSimulationComplete={(result, id) => {
               setSimulationResult(result)

@@ -37,7 +37,14 @@ data/
 .coverage
 htmlcov/
 
-# Logs
+# Logs — generated at runtime, not committed
+# The .gitkeep files inside logs/pytest/ and logs/vitest/ ARE committed
+# so the directories exist for local and CI runs without manual setup.
+logs/pytest/*.log
+logs/pytest/*.xml
+logs/pytest/coverage/
+logs/vitest/*.json
+logs/vitest/*.xml
 *.log
 
 # Frontend build

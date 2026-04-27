@@ -7,6 +7,7 @@ interface Props {
   opponent: Squad | null
   venue: string
   formationBias: FormationBias
+  season: number
   simulationResult: SimulationResponse | null
   onSimulationComplete: (result: SimulationResponse, id: string) => void
 }
@@ -18,7 +19,7 @@ const ROLE_ICON: Record<string, string> = {
   wicket_keeper: '🧤',
 }
 
-export function ILPPanel({ squad, opponent, venue, formationBias, simulationResult, onSimulationComplete }: Props) {
+export function ILPPanel({ squad, opponent, venue, formationBias, season, simulationResult, onSimulationComplete }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -40,7 +41,7 @@ export function ILPPanel({ squad, opponent, venue, formationBias, simulationResu
           match_id: `${squad.id}_vs_${opponent.id}_${Date.now()}`,
           venue,
           opponent_team: opponent.name,
-          season: 2024,
+          season,
           is_home: false,
         },
         formation_bias: formationBias,

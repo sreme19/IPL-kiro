@@ -4,8 +4,8 @@ Description: IPL Captain Simulator - FastAPI Backend with React Frontend
 
 Globals:
   Function:
-    Timeout: 30
-    MemorySize: 512
+    Timeout: 60
+    MemorySize: 1024
     Runtime: python3.9
     Architectures:
       - x86_64

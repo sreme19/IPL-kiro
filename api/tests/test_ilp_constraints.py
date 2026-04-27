@@ -12,6 +12,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models.ilp_solver import ILPSolver
 from models.schemas import Player, PlayerRole
 
+pytestmark = pytest.mark.unit
+
 
 class TestILPConstraints:
     """Test all ILP hard constraints are enforced."""

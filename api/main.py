@@ -8,7 +8,7 @@ import os
 from fastapi import FastAPI
 from mangum import Mangum
 
-from routers import simulation, match, tournament, stats
+from routers import simulation, match, tournament, stats, matches
 
 app = FastAPI(
     title="IPL Captain Simulator API",
@@ -21,6 +21,7 @@ app.include_router(simulation.router, prefix="/api/simulation", tags=["simulatio
 app.include_router(match.router, prefix="/api/match", tags=["match"])
 app.include_router(tournament.router, prefix="/api/tournament", tags=["tournament"])
 app.include_router(stats.router, prefix="/api/stats", tags=["stats"])
+app.include_router(matches.router, prefix="/api/matches", tags=["matches"])
 
 @app.get("/")
 async def root():

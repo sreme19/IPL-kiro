@@ -1,8 +1,13 @@
 import { useState } from 'react'
 import { type SimulationResponse } from '../api/client'
+import { LinkedInShareModal } from '../components/LinkedInShareModal'
 
 interface Props {
   simulationResult: SimulationResponse | null
+  teamName: string
+  opponentName: string
+  venue: string
+  season: number
 }
 
 const INSIGHT_COLOR: Record<string, string> = {
@@ -19,8 +24,9 @@ const DEFAULT_STEPS = [
   { step_number: 4, title: 'Monte Carlo Win Probability', description: '10,000 vectorized T20 innings are simulated per Poisson/Bernoulli MDP with Platt-scaling calibration.', formula: 'P(win) = #{runs_team > runs_opp} / N', insight: '95% CI narrows with more calibration data', insight_type: 'monte_carlo' },
 ]
 
-export function CommentaryPanel({ simulationResult }: Props) {
+export function CommentaryPanel({ simulationResult, teamName, opponentName, venue, season }: Props) {
   const [activeStep, setActiveStep] = useState<number>(0)
+  const [showShare, setShowShare] = useState(false)
 
   const steps = simulationResult?.optimization.commentary_steps.length
     ? simulationResult.optimization.commentary_steps
@@ -67,8 +73,26 @@ export function CommentaryPanel({ simulationResult }: Props) {
           </div>
         )}
 
-        <div className="total-steps" data-testid="total-steps">{steps.length} commentary steps</div>
+        <div className="commentary-footer">
+          <span className="total-steps" data-testid="total-steps">{steps.length} commentary steps</span>
+          {simulationResult && (
+            <button className="share-btn" onClick={() => setShowShare(true)}>
+              🔗 Share on LinkedIn
+            </button>
+          )}
+        </div>
       </div>
+
+      {showShare && simulationResult && (
+        <LinkedInShareModal
+          result={simulationResult}
+          teamName={teamName}
+          opponentName={opponentName}
+          venue={venue}
+          season={season}
+          onClose={() => setShowShare(false)}
+        />
+      )}
     </div>
   )
 }

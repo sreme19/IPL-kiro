@@ -12,6 +12,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models.commentary import CommentaryGenerator, InsightType
 from models.schemas import Player, PlayerRole
 
+pytestmark = pytest.mark.unit
+
 
 class TestCommentarySchema:
     """Test CommentaryStep schema structure and usage."""

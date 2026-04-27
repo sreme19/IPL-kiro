@@ -14,40 +14,88 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r api/requirements.txt
-          pip install pytest
-      
-      - name: Run backend tests
-        run: pytest api/tests/ -v
+          pip install pytest pytest-asyncio pytest-cov httpx
+        working-directory: kiro-packet
+
+      - name: Create log directories
+        run: mkdir -p logs/pytest
+        working-directory: kiro-packet
+
+      - name: Run unit tests
+        run: pytest api/tests/ -v -m unit --junit-xml=logs/pytest/unit.xml
+        working-directory: kiro-packet
+
+      - name: Run functional tests
+        run: pytest api/tests/ -v -m functional --junit-xml=logs/pytest/functional.xml
+        working-directory: kiro-packet
+
+      - name: Run regression tests
+        run: pytest api/tests/ -v -m regression --junit-xml=logs/pytest/regression.xml
+        working-directory: kiro-packet
+
+      - name: Run all tests with coverage + combined log
+        run: |
+          pytest api/tests/ -v \
+            --cov=api \
+            --cov-report=html:logs/pytest/coverage \
+            --cov-report=term-missing \
+            --junit-xml=logs/pytest/junit.xml \
+            --log-file=logs/pytest/run.log \
+            --log-file-level=DEBUG
+        working-directory: kiro-packet
+
+      - name: Upload backend test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-logs-${{ github.run_number }}
+          path: kiro-packet/logs/pytest/
+          retention-days: 30
 
   test-frontend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      
+        
       - name: Install dependencies
         run: npm ci
-      
+        working-directory: kiro-packet
+
+      - name: Create log directories
+        run: mkdir -p logs/vitest
+        working-directory: kiro-packet
+
       - name: Type check
         run: npm run type-check
-      
+        working-directory: kiro-packet
+
       - name: Run frontend tests
-        run: npm test -- --run
+        run: npm test
+        working-directory: kiro-packet
+
+      - name: Upload frontend test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-test-logs-${{ github.run_number }}
+          path: kiro-packet/logs/vitest/
+          retention-days: 30
 
   deploy-staging:
     needs: [test-backend, test-frontend]

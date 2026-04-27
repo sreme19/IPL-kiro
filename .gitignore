@@ -15,9 +15,10 @@ build/
 !netlify.toml
 
 # Data files
-data/
+data/*
 *.parquet
 *.duckdb
+!data/ipl.duckdb
 
 # IDE
 .vscode/

@@ -9,15 +9,15 @@ from typing import Dict, Any
 import uuid
 import time
 
-from models.schemas import SimulationStart, SimulationResponse
-from models.session_store import SessionStore
-from models.scout_agent import ScoutAgent
-from models.conditions_agent import ConditionsAgent
-from models.opponent_agent import OpponentAgent
-from models.ilp_solver import ILPSolver
-from models.monte_carlo import MonteCarloSimulator
-from models.narrative_agent import NarrativeAgent
-from models.schemas import Player, PlayerRole
+from api.models.schemas import SimulationStart, SimulationResponse
+from api.models.session_store import SessionStore
+from api.models.scout_agent import ScoutAgent
+from api.models.conditions_agent import ConditionsAgent
+from api.models.opponent_agent import OpponentAgent
+from api.models.ilp_solver import ILPSolver
+from api.models.monte_carlo import MonteCarloSimulator
+from api.models.narrative_agent import NarrativeAgent
+from api.models.schemas import Player, PlayerRole
 
 router = APIRouter()
 
@@ -33,58 +33,76 @@ narrative_agent = NarrativeAgent()
 
 @router.post("/start", response_model=SimulationResponse)
 async def start_simulation(request: Dict[str, Any]) -> SimulationResponse:
-    """Initialize a new simulation session and return analysis."""
-    
+    """Initialize a new simulation session and return analysis.
+
+    Accepts flat payload from frontend:
+        { team, opponent, venue, formation_bias, players: [...] }
+    or the legacy nested format:
+        { team: { name, squad: [...] }, match_context: { venue, ... }, ... }
+    """
     try:
-        # Extract request data
-        team_data = request.get("team", {})
-        match_context = request.get("match_context", {})
-        formation_bias = request.get("formation_bias", "balanced")
-        must_include = request.get("must_include", [])
-        must_exclude = request.get("must_exclude", [])
-        
-        # Generate simulation ID
+        # Support both flat (frontend) and nested (legacy) payload shapes
+        if isinstance(request.get("team"), str):
+            # Flat frontend payload
+            team_name = request.get("team", "Team")
+            opponent_name = request.get("opponent", "Opponent")
+            venue = request.get("venue", "")
+            formation_bias = request.get("formation_bias", "balanced")
+            raw_players = request.get("players", [])
+            must_include = request.get("must_include", [])
+            must_exclude = request.get("must_exclude", [])
+            season = int(request.get("season", 2024))
+        else:
+            # Nested legacy payload
+            team_data = request.get("team", {})
+            match_context = request.get("match_context", {})
+            team_name = team_data.get("name", "Team")
+            opponent_name = match_context.get("opponent_team", "Opponent")
+            venue = match_context.get("venue", "")
+            formation_bias = request.get("formation_bias", "balanced")
+            raw_players = team_data.get("squad", [])
+            must_include = request.get("must_include", [])
+            must_exclude = request.get("must_exclude", [])
+            season = int(match_context.get("season", 2024))
+
+        # Generate simulation ID and create session
         simulation_id = str(uuid.uuid4())
-        
-        # Create session
         session = session_store.create_session(simulation_id)
-        
-        # Convert to Player objects
+
+        # Convert raw player dicts to Player objects
         squad_players = [
             Player(
-                player_id=p["player_id"],
-                name=p["name"],
+                player_id=p.get("player_id", p.get("id", str(i))),
+                name=p.get("name", f"Player {i+1}"),
                 role=PlayerRole(p.get("role", "batsman")),
                 is_overseas=p.get("is_overseas", False),
                 expected_runs=p.get("expected_runs", 0.8),
                 expected_wickets=p.get("expected_wickets", 0.03),
-                form_score=1.0
+                form_score=p.get("form_score", 1.0)
             )
-            for p in team_data.get("squad", [])
+            for i, p in enumerate(raw_players)
         ]
-        
-        # Get venue analysis
-        venue = match_context.get("venue", "")
+
+        # Get venue weights
         venue_weights = conditions_agent.compute_venue_vector(
             venue=venue,
             formation_bias=formation_bias
         )
-        
-        # Load tensor data
+
+        # Load player tensors (uses S3 JSON or fallback values)
         tensors = scout_agent.get_squad_tensors(
             [p.player_id for p in squad_players],
             venue=venue,
-            season=match_context.get("season", 2023)
+            season=season
         )
-        
-        # Build opponent matchup graph
-        # Opponent data should come from request - using empty for now
-        opponent_players = []
-        matchup_graph = opponent_agent.build_matchup_graph(
+
+        # Build opponent threat graph (no opponent players yet — uses fallbacks)
+        opponent_players: list = []
+        opponent_agent.build_matchup_graph(
             squad_players, opponent_players, venue, tensors
         )
-        
-        # Solve ILP optimization
+
+        # Solve ILP
         optimization_result = ilp_solver.solve_optimal_xi(
             squad=squad_players,
             venue_weights=venue_weights,
@@ -93,37 +111,29 @@ async def start_simulation(request: Dict[str, Any]) -> SimulationResponse:
             must_exclude=must_exclude,
             tensors=tensors
         )
-        
-        # Run Monte Carlo simulation
+
+        # Monte Carlo win probability
         team_tensor_summary = {
-            player.player_id: tensors.get(player.player_id, {}).get("batting_form", 1.0)
+            player.player_id: tensors.get(player.player_id, {"batting_form": 1.0, "bowling_form": 1.0})
             for player in optimization_result.selected_xi
         }
-        
-        # Opponent tensors for simulation (empty if no opponent data)
-        opponent_tensor_summary = {
-            player.player_id: 1.0
-            for player in opponent_players
-        }
-        
         monte_carlo_result = monte_carlo.simulate_win_probability(
             team_tensors=team_tensor_summary,
-            opponent_tensors=opponent_tensor_summary,
+            opponent_tensors={},
             venue_adjustments=venue_weights
         )
-        
-        # Generate narrative
+
+        # Narrative commentary (falls back to static text if Claude unavailable)
         narrative = narrative_agent.generate_narrative(
             match_id=simulation_id,
             commentary_steps=optimization_result.commentary_steps,
-            team_name=team_data.get("name", "Team"),
-            opponent_name=match_context.get("opponent_team", "Opponent"),
+            team_name=team_name,
+            opponent_name=opponent_name,
             venue=venue
         )
-        
-        # Update session with results
+
         session_store.update_session(session)
-        
+
         return SimulationResponse(
             simulation_id=simulation_id,
             optimization={
@@ -136,19 +146,19 @@ async def start_simulation(request: Dict[str, Any]) -> SimulationResponse:
             simulation={
                 "match_id": simulation_id,
                 "team_xi": [player.__dict__ for player in optimization_result.selected_xi],
-                "opponent_xi": [player.__dict__ for player in opponent_players],
+                "opponent_xi": [],
                 "win_probability": {
                     "win_probability": monte_carlo_result.win_probability,
                     "confidence_interval": monte_carlo_result.confidence_interval,
                     "calibration_applied": monte_carlo_result.calibration_applied,
                     "sample_size": monte_carlo_result.sample_size
                 },
-                "venue_analysis": venue_weights,
+                "venue_analysis": {k: v for k, v in venue_weights.items() if isinstance(v, (int, float))},
                 "key_threats": opponent_agent.get_high_threat_matchups("home")[:5]
             },
             narrative=narrative
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Simulation failed: {str(e)}")
 

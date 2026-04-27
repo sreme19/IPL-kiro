@@ -115,8 +115,10 @@ class SessionStore:
         try:
             self.sessions_table.put_item(
                 Item={
+                    'session_id': simulation_id,
                     'simulation_id': simulation_id,
-                    'data': json.dumps(asdict(session))
+                    'data': json.dumps(asdict(session)),
+                    'ttl': int(expires_at)
                 }
             )
             
@@ -133,7 +135,7 @@ class SessionStore:
         
         try:
             response = self.sessions_table.get_item(
-                Key={'simulation_id': simulation_id}
+                Key={'session_id': simulation_id}
             )
             
             if 'Item' in response:
@@ -155,8 +157,10 @@ class SessionStore:
             
             self.sessions_table.put_item(
                 Item={
+                    'session_id': session.simulation_id,
                     'simulation_id': session.simulation_id,
-                    'data': json.dumps(asdict(session))
+                    'data': json.dumps(asdict(session)),
+                    'ttl': int(session.expires_at)
                 }
             )
             
@@ -291,8 +295,7 @@ class SessionStore:
         }
     
     def _increment_counter(self, counter_name: str) -> None:
-        """Increment a named counter."""
-        
+        """Increment a named counter (best-effort — silently ignored if table missing)."""
         try:
             self.counters_table.update_item(
                 Key={'counter_name': counter_name},
@@ -301,14 +304,8 @@ class SessionStore:
                 ExpressionAttributeValues={':inc': 1},
                 ReturnValues='UPDATED_NEW'
             )
-        except ClientError:
-            # Counter doesn't exist, create it
-            self.counters_table.put_item(
-                Item={
-                    'counter_name': counter_name,
-                    'value': 1
-                }
-            )
+        except Exception:
+            pass
     
     def get_counter(self, counter_name: str) -> int:
         """Get current counter value."""

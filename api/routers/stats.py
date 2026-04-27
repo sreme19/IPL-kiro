@@ -7,7 +7,7 @@ GET /api/stats/community - Community usage statistics.
 from fastapi import APIRouter, HTTPException
 from typing import Dict, Any
 
-from models.session_store import SessionStore
+from api.models.session_store import SessionStore
 
 router = APIRouter()
 session_store = SessionStore()

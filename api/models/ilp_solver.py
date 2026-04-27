@@ -9,8 +9,8 @@ import numpy as np
 from typing import Dict, List, Tuple, Any, Optional
 from dataclasses import dataclass
 
-from .schemas import Player, PlayerRole
-from .commentary import CommentaryGenerator, CommentaryStep
+from api.models.schemas import Player, PlayerRole
+from api.models.commentary import CommentaryGenerator, CommentaryStep
 
 
 @dataclass

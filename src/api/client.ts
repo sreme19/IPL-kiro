@@ -7,7 +7,7 @@ const API_BASE = import.meta.env.VITE_API_URL
 export const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 30000,
+  timeout: 65000,
 })
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -204,6 +204,24 @@ export const SQUADS: Squad[] = [
     ],
   },
 ]
+
+export const IPL_SEASONS = [
+  2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017,
+  2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026,
+]
+
+export interface HistoricalMatch {
+  match_id: string
+  season: number
+  date: string
+  city: string
+  venue: string
+  our_team: string
+  opponent: string
+  opponent_squad_id: string
+  winner: string
+  result: 'won' | 'lost'
+}
 
 export const VENUES = [
   { name: 'M. A. Chidambaram Stadium', city: 'Chennai', type: 'spin_friendly' },

@@ -8,8 +8,8 @@ from fastapi import APIRouter, HTTPException
 from typing import Dict, Any, List
 import uuid
 
-from models.tournament_graph import TournamentGraph
-from models.session_store import SessionStore
+from api.models.tournament_graph import TournamentGraph
+from api.models.session_store import SessionStore
 
 router = APIRouter()
 

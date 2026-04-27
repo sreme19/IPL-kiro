@@ -13,7 +13,7 @@ try:
 except ImportError:
     Anthropic = None  # type: ignore
 
-from .commentary import CommentaryStep
+from api.models.commentary import CommentaryStep
 
 
 class NarrativeAgent:

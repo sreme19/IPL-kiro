@@ -9,8 +9,10 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from models.commentary import CommentaryGenerator, InsightType
-from models.schemas import Player, PlayerRole
+from api.models.commentary import CommentaryGenerator, InsightType
+from api.models.schemas import Player, PlayerRole
+
+pytestmark = pytest.mark.unit
 
 
 class TestCommentarySchema:

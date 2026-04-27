@@ -23,8 +23,11 @@ function App() {
   const [selectedVenue, setSelectedVenue] = useState<string>('')
   const [season, setSeason] = useState<number>(IPL_SEASONS[1]) // default 2023
   const [formationBias, setFormationBias] = useState<FormationBias>('balanced')
+  const [selectedSeason, setSelectedSeason] = useState<number>(2024)
   const [simulationResult, setSimulationResult] = useState<SimulationResponse | null>(null)
   const [simulationId, setSimulationId] = useState<string | null>(null)
+  const [replayMatch, setReplayMatch] = useState<HistoricalMatch | null>(null)
+  const [mode, setMode] = useState<'upcoming' | 'historical'>('upcoming')
 
   useEffect(() => {
     trackPageView('main-dashboard')
@@ -84,7 +87,7 @@ function App() {
         <div className="panel-grid">
           <SquadPanel
             selectedSquad={selectedSquad}
-            onSquadSelect={setSelectedSquad}
+            onSquadSelect={squad => { setSelectedSquad(squad); setSimulationResult(null); setReplayMatch(null) }}
           />
           <OpponentPanel
             mySquadId={selectedSquad?.id ?? null}
@@ -129,6 +132,10 @@ function App() {
           />
           <CommentaryPanel
             simulationResult={simulationResult}
+            teamName={selectedSquad?.name ?? ''}
+            opponentName={selectedOpponent?.name ?? ''}
+            venue={selectedVenue}
+            season={selectedSeason}
           />
         </div>
       </main>

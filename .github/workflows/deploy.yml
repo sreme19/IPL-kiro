@@ -14,12 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -33,21 +33,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      
+        
       - name: Install dependencies
         run: npm ci
-      
+
+      - name: Create log directories
+        run: mkdir -p logs/vitest
+
       - name: Type check
         run: npm run type-check
-      
+
       - name: Run frontend tests
-        run: npm test -- --run
+        run: npm test
+
+      - name: Upload frontend test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-test-logs-${{ github.run_number }}
+          path: logs/vitest/
+          retention-days: 30
 
   deploy-staging:
     needs: [test-backend, test-frontend]
@@ -61,20 +72,28 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-      
+          aws-region: us-west-2
+
       - name: Set up SAM CLI
         uses: aws-actions/setup-sam@v2
-      
+
+      - name: Assemble lambda_package
+        run: |
+          rm -rf lambda_package
+          mkdir -p lambda_package
+          cp -r api lambda_package/
+          cp -r data lambda_package/
+          cp requirements.txt lambda_package/
+
       - name: Build SAM application
         run: sam build --use-container
-      
+
       - name: Deploy to Staging
         run: |
           sam deploy --stack-name ipl-kiro-staging \
             --parameter-overrides Environment=staging PostHogKey=${{ secrets.POSTHOG_KEY }} \
             --s3-bucket ipl-kiro-deployments \
-            --region us-east-1 \
+            --region us-west-2 \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
             --capabilities CAPABILITY_IAM
@@ -86,26 +105,34 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-      
+          aws-region: us-west-2
+
       - name: Set up SAM CLI
         uses: aws-actions/setup-sam@v2
-      
+
+      - name: Assemble lambda_package
+        run: |
+          rm -rf lambda_package
+          mkdir -p lambda_package
+          cp -r api lambda_package/
+          cp -r data lambda_package/
+          cp requirements.txt lambda_package/
+
       - name: Build SAM application
         run: sam build --use-container
-      
+
       - name: Deploy to Production
         run: |
           sam deploy --stack-name ipl-kiro-production \
             --parameter-overrides Environment=production PostHogKey=${{ secrets.POSTHOG_KEY }} \
             --s3-bucket ipl-kiro-deployments \
-            --region us-east-1 \
+            --region us-west-2 \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
             --capabilities CAPABILITY_IAM

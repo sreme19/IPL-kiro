@@ -8,9 +8,12 @@ import os
 import json
 import time
 from typing import Dict, Any, Optional
-from anthropic import Anthropic
+try:
+    from anthropic import Anthropic
+except ImportError:
+    Anthropic = None  # type: ignore
 
-from commentary import CommentaryStep
+from .commentary import CommentaryStep
 
 
 class NarrativeAgent:
@@ -23,7 +26,7 @@ class NarrativeAgent:
         
         # Initialize Claude client if API key is available
         api_key = os.environ.get("ANTHROPIC_API_KEY")
-        if api_key:
+        if api_key and Anthropic is not None:
             self.client = Anthropic(api_key=api_key)
     
     def generate_narrative(

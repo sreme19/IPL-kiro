@@ -1,217 +1,316 @@
-# IPL Captain Simulator
+# 🏏 IPL Captain Simulator
 
-An AI-powered IPL cricket team selection and match simulation platform. Combines Integer Linear Programming (ILP) for optimal XI selection with Monte Carlo simulation for win probability estimation.
+An AI-powered IPL cricket team selection and match simulation platform. Combines **Integer Linear Programming (ILP)** for optimal XI selection with **Monte Carlo simulation** for win probability estimation — deployed serverlessly on AWS.
+
+## 🌐 Live Demo
+
+| Service | URL |
+|---|---|
+| **Frontend** | https://ipl-captain-simulator.netlify.app |
+| **Backend API** | https://cwex9kiq9d.execute-api.us-west-2.amazonaws.com/staging/ |
+| **Health check** | https://cwex9kiq9d.execute-api.us-west-2.amazonaws.com/staging/health |
 
 ---
 
-## Architecture
+## 🧠 How It Works
+
+1. **Select** your IPL squad, opponent, venue, and formation bias
+2. **ILP Optimizer** (PuLP CBC solver) picks the mathematically optimal XI by maximising expected runs + wickets while penalising opponent threat edges and confidence interval width
+3. **Monte Carlo Engine** runs 10,000 vectorised T20 innings to compute win probability with a 95% confidence interval
+4. **AI Commentary** explains each decision step — venue encoding → bipartite threat graph → ILP solution → MC result
+
+---
+
+## 🏗️ Technology Stack
+
+### Frontend
+| Technology | Version | Purpose |
+|---|---|---|
+| **React** | 18 | UI component framework |
+| **TypeScript** | 5 | Type-safe JavaScript |
+| **Vite** | 5 | Build tool and dev server |
+| **Axios** | 1.x | HTTP client for API calls |
+| **PostHog** | JS SDK | Product analytics (page views, events) |
+| **Vitest** | 1.x | Unit testing framework |
+| **Netlify** | — | Static hosting + global CDN |
+
+### Backend
+| Technology | Version | Purpose |
+|---|---|---|
+| **Python** | 3.9 | Runtime |
+| **FastAPI** | ≥0.104 | REST API framework with automatic OpenAPI docs |
+| **Mangum** | ≥0.17 | ASGI adapter to run FastAPI on AWS Lambda |
+| **Pydantic** | v2 | Request/response schema validation |
+| **PuLP** | ≥2.7 | Integer Linear Programming (CBC solver) |
+| **NumPy** | ≥1.24 | Vectorised Monte Carlo simulation (10k rollouts) |
+| **NetworkX** | ≥3.2 | Max-flow DAG for tournament path computation |
+| **Boto3** | ≥1.34 | AWS SDK — DynamoDB + S3 access |
+
+### Infrastructure (AWS)
+| Service | Resource | Purpose |
+|---|---|---|
+| **AWS Lambda** | `ipl-kiro-api-staging` | Serverless compute for FastAPI (512 MB, 30s timeout) |
+| **API Gateway** | REST API | HTTPS endpoint + CORS for frontend |
+| **DynamoDB** | `ipl-kiro-sessions-staging` | Per-user session state, form vectors, calibration log (7-day TTL) |
+| **S3** | `ipl-kiro-data-staging-*` | Player tensor JSON, reference data |
+| **CloudFormation** | `ipl-kiro-staging` | Infrastructure as Code via AWS SAM |
+| **IAM** | Auto-generated role | Least-privilege Lambda execution role |
+
+### DevOps & Tooling
+| Tool | Purpose |
+|---|---|
+| **AWS SAM CLI** | Build, package, and deploy Lambda + infrastructure |
+| **Netlify CLI** | Frontend deployment and CDN invalidation |
+| **GitHub** | Source control (`sreme19/IPL-kiro`) |
+| **GitHub Actions** | CI/CD pipeline (`.github/workflows/deploy.yml`) |
+
+---
+
+## 📁 Project Structure
 
 ```
 kiro-packet/
-├── api/                        # FastAPI backend (Python)
-│   ├── main.py                 # App entrypoint + Mangum Lambda wrapper
+├── api/                        # FastAPI backend (Python 3.9)
+│   ├── main.py                 # App entrypoint + Mangum Lambda handler
 │   ├── middleware/
-│   │   └── error_reporter.py  # Auto-create Linear bug tickets on 5xx
+│   │   └── error_reporter.py   # Auto-create Linear tickets on 5xx errors
 │   ├── models/
-│   │   ├── schemas.py          # Pydantic request/response models
-│   │   ├── ilp_solver.py       # PuLP ILP optimizer for XI selection
-│   │   ├── monte_carlo.py      # 10k-rollout MDP win probability simulator
-│   │   ├── session_store.py    # DynamoDB session state with TTL
-│   │   ├── scout_agent.py      # Player tensor data loader (S3)
-│   │   ├── conditions_agent.py # Venue encoding and formation weights
-│   │   ├── opponent_agent.py   # Bipartite threat graph builder
-│   │   ├── narrative_agent.py  # AI commentary narrative generator
+│   │   ├── schemas.py          # Pydantic v2 request/response models
+│   │   ├── ilp_solver.py       # PuLP CBC ILP optimizer — XI selection
+│   │   ├── monte_carlo.py      # NumPy vectorised T20 MDP simulator
+│   │   ├── session_store.py    # DynamoDB session state (TTL, EWM form)
+│   │   ├── scout_agent.py      # S3 JSON tensor loader + form adjustment
+│   │   ├── conditions_agent.py # Venue encoding + formation weights
+│   │   ├── opponent_agent.py   # NetworkX bipartite threat graph
+│   │   ├── narrative_agent.py  # Claude AI commentary (optional)
 │   │   ├── tournament_graph.py # Max-flow DAG for tournament paths
-│   │   └── commentary.py       # CommentaryStep generator (4 steps)
+│   │   └── commentary.py       # 4-step CommentaryStep generator
 │   ├── routers/
 │   │   ├── simulation.py       # POST /api/simulation/start
 │   │   ├── match.py            # POST /api/match/recommend-xi, /simulate
-│   │   ├── tournament.py       # GET /api/tournament/path, /analysis
-│   │   └── stats.py            # GET /api/stats/community, /system
+│   │   ├── tournament.py       # GET  /api/tournament/path, /analysis
+│   │   └── stats.py            # GET  /api/stats/community, /system
 │   └── tests/
 │       ├── test_ilp_constraints.py
 │       ├── test_monte_carlo.py
 │       └── test_commentary_schema.py
-├── src/                        # React + TypeScript frontend
-│   ├── App.tsx                 # Root component with 6-panel layout
+├── src/                        # React 18 + TypeScript frontend
+│   ├── App.tsx                 # Root — shared state wired to all panels
+│   ├── api/
+│   │   └── client.ts           # Axios client + all TypeScript types + squad data
 │   ├── panels/
-│   │   ├── SquadPanel.tsx      # Team/squad selector
-│   │   ├── OpponentPanel.tsx   # Opponent selector
-│   │   ├── VenuePanel.tsx      # Venue selector
-│   │   ├── ILPPanel.tsx        # ILP optimization trigger + results
-│   │   ├── MonteCarloPanel.tsx # Win probability simulator
-│   │   └── CommentaryPanel.tsx # AI commentary steps viewer
+│   │   ├── SquadPanel.tsx      # Step 1 — team/squad selector with player list
+│   │   ├── OpponentPanel.tsx   # Step 2 — opponent selector with stats card
+│   │   ├── VenuePanel.tsx      # Step 3 — venue + formation bias (α/β weights)
+│   │   ├── ILPPanel.tsx        # Step 4 — ILP trigger, selected XI display
+│   │   ├── MonteCarloPanel.tsx # Step 5 — win probability circle + CI bars
+│   │   └── CommentaryPanel.tsx # Step 6 — tabbed 4-step AI commentary
 │   └── analytics/
-│       ├── posthog.ts          # PostHog analytics client
-│       └── events.ts           # Typed analytics event helpers
+│       ├── posthog.ts          # PostHog init
+│       └── events.ts           # Typed event helpers (6 tracked events)
 ├── scripts/
-│   ├── build_data_pipeline.py  # ETL pipeline for IPL ball-by-ball data
+│   ├── build_data_pipeline.py  # ETL: Cricsheet JSON → player tensors
 │   ├── build_reference_data.py # Reference data builder (venues, squads)
-│   ├── check_gate.py           # CI quality gate checks
-│   └── validate_ipl_data.py    # Data validation scripts
-├── data/
-│   ├── ipl_json_raw/           # Cricsheet JSON match data
+│   ├── check_gate.py           # CI quality gate
+│   └── validate_ipl_data.py    # Raw data validation
+├── data/                       # gitignored — loaded from S3 in production
+│   ├── ipl_json_raw/           # Cricsheet ball-by-ball JSON
 │   └── reference/
 │       ├── team_name_map.json
 │       ├── overseas_flags.json
 │       ├── squad_pools.json
 │       └── venue_geometry.json
-├── template.yaml               # AWS SAM infrastructure definition
-├── samconfig.toml              # SAM deployment configuration
-├── requirements.txt            # Python dependencies
+├── lambda_package/             # gitignored — SAM build artifact
+├── .github/workflows/
+│   └── deploy.yml              # GitHub Actions CI/CD
+├── template.yaml               # AWS SAM infrastructure (Lambda + API GW + DynamoDB + S3)
+├── samconfig.toml              # SAM deploy config (staging + production)
+├── netlify.toml                # Netlify build config + env vars
+├── requirements.txt            # Python dependencies (no pandas/pyarrow for Lambda)
 ├── package.json                # Node.js dependencies
-└── vite.config.ts              # Vite frontend build config
+└── vite.config.ts              # Vite config with API proxy
 ```
 
 ---
 
-## Infrastructure (AWS SAM)
+## ⚙️ Core Algorithm Details
 
-| Resource | Description |
-|---|---|
-| `FastAPIFunction` | Lambda running FastAPI via Mangum |
-| `ApiGatewayApi` | API Gateway with CORS enabled |
-| `SessionsTable` | DynamoDB sessions table (7-day TTL) |
-| `DataBucket` | S3 bucket for player tensor data |
+### ILP Optimizer (`api/models/ilp_solver.py`)
 
-### Deploy
+**Objective:**
+```
+max Σ ( α·E[runs_i] + β·E[wickets_i] - γ·CI_penalty_i - δ·threat_i ) · x_i
+```
+
+**Constraints:**
+- `Σ x_i = 11` — exactly 11 players
+- `Σ x_i (role=WK) ≥ 1` — at least 1 wicket-keeper
+- `Σ x_i (role=bowler or all_rounder) ≥ 4` — bowling cover
+- `Σ x_i (overseas=true) ≤ 4` — ICC overseas cap
+- `x_i ∈ {0,1}` — binary selection
+
+**Formation weights:**
+| Bias | α (batting) | β (bowling) |
+|---|---|---|
+| `batting` | 0.65 | 0.35 |
+| `balanced` | 0.55 | 0.45 |
+| `bowling` | 0.35 | 0.65 |
+
+**Solver:** PuLP CBC (open-source MILP), 5-second time limit
+
+---
+
+### Monte Carlo Simulator (`api/models/monte_carlo.py`)
+
+- **10,000 vectorised T20 rollouts** per simulation using NumPy
+- Each ball modelled as Poisson (runs) + Bernoulli (wicket)
+- **95% confidence interval** via normal approximation: `p ± 1.96·√(p(1-p)/N)`
+- **Platt scaling** calibration applied after ≥3 historical results
+- In-memory LRU cache keyed on input hash to avoid re-computation
+
+---
+
+### Session Store (`api/models/session_store.py`)
+
+- **DynamoDB** table with `session_id` (hash key) and 7-day TTL
+- Per-session state: form vector, squad fatigue, calibration log
+- **EWM form update:** `form_new = 0.4 · form_current + 0.6 · match_result`
+- **Fatigue decay:** 10% per match played
+
+---
+
+### Tournament Graph (`api/models/tournament_graph.py`)
+
+- Directed Acyclic Graph (DAG) modelling IPL playoff structure
+- **Max-flow** algorithm (NetworkX) finds highest-probability qualification path
+- Nodes: group matches → Qualifier 1 → Eliminator → Qualifier 2 → Final
+
+---
+
+## 🚀 Deployment
+
+### AWS Backend (SAM)
 
 ```bash
-# Build and deploy to staging
+# Prerequisites: AWS CLI configured, SAM CLI installed
+pip install aws-sam-cli
+
+# Build Lambda package
 sam build
+
+# Deploy to staging
 sam deploy --config-env staging
 
 # Deploy to production
 sam deploy --config-env production
 ```
 
----
+Outputs after deploy:
+- `ApiUrl` — API Gateway HTTPS endpoint
+- `SessionsTable` — DynamoDB table name
+- `DataBucket` — S3 bucket name
 
-## Backend
-
-### Requirements
-
-- Python 3.9+
-- `pip install -r requirements.txt`
-
-### Run locally
+### Frontend (Netlify)
 
 ```bash
+# Prerequisites: Netlify CLI
+npm install -g netlify-cli
+
+# Build and deploy
+npm run build
+netlify deploy --prod --dir dist
+```
+
+Or set `VITE_API_URL` in `netlify.toml` and push — Netlify auto-builds on every commit.
+
+---
+
+## 🛠️ Local Development
+
+### Backend
+
+```bash
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Run FastAPI locally
 cd api
 uvicorn main:app --reload --port 8000
 ```
 
-### Key API Endpoints
-
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/api/simulation/start` | Start simulation session, returns optimal XI + win probability |
-| `GET` | `/api/simulation/{id}/status` | Get session status |
-| `POST` | `/api/simulation/{id}/confirm-xi` | Confirm or override AI XI |
-| `POST` | `/api/match/recommend-xi` | Get AI-recommended XI for a match |
-| `POST` | `/api/match/simulate` | Run Monte Carlo simulation |
-| `POST` | `/api/match/result` | Record actual result for Platt calibration |
-| `GET` | `/api/tournament/path?team=CSK` | Tournament max-flow path |
-| `GET` | `/api/tournament/analysis` | Full tournament analysis |
-| `GET` | `/api/stats/community` | Community-wide usage stats |
-| `GET` | `/api/stats/system` | System health metrics |
-| `GET` | `/health` | Health check |
-
-### Core Models
-
-**ILP Solver** (`api/models/ilp_solver.py`)
-- Formulation: `max Σ(α·E[runs] + β·E[wkts] - γ·CI_penalty - δ·threat) · x_i`
-- Constraints: exactly 11 players, ≥1 WK, ≥4 bowlers (incl. all-rounders), ≤4 overseas
-- Formation biases: `batting (α=0.65, β=0.35)`, `balanced (α=0.55, β=0.45)`, `bowling (α=0.35, β=0.65)`
-- Solver: PuLP CBC with 5-second time limit
-
-**Monte Carlo Simulator** (`api/models/monte_carlo.py`)
-- 10,000 vectorized T20 rollouts using NumPy
-- 95% confidence interval via normal approximation
-- Platt scaling calibration after ≥3 historical matches
-- In-memory LRU cache keyed on input hash
-
-**Session Store** (`api/models/session_store.py`)
-- DynamoDB-backed per-user session: form vector, fatigue, calibration log
-- EWM form update: `form = 0.4 * current + 0.6 * new`
-- 10% fatigue decay per match played
-- 7-day TTL with DynamoDB native expiry
-
----
-
-## Frontend
-
-### Requirements
-
-- Node.js 18+
-- `npm install`
-
-### Run locally
+### Frontend
 
 ```bash
+# Install Node dependencies
+npm install
+
+# Start dev server (proxies /api to localhost:8000 by default)
+npm run dev
+
+# To proxy to the live AWS backend instead:
+echo "VITE_API_URL=https://cwex9kiq9d.execute-api.us-west-2.amazonaws.com/staging" > .env.local
 npm run dev
 ```
 
-### Build for production
+### Tests
 
 ```bash
-npm run build
-```
-
-### Test
-
-```bash
+# Frontend unit tests
 npm test
-```
 
-### Panel overview
-
-| Panel | Description |
-|---|---|
-| `SquadPanel` | Select your IPL team/squad |
-| `OpponentPanel` | Select opponent team |
-| `VenuePanel` | Select match venue (affects formation weights) |
-| `ILPPanel` | Trigger ILP optimization, view selected XI |
-| `MonteCarloPanel` | Run win probability simulation |
-| `CommentaryPanel` | View AI commentary steps (venue → threat → ILP → MC) |
-
----
-
-## Data Pipeline
-
-```bash
-# Validate raw IPL JSON data
-python scripts/validate_ipl_data.py
-
-# Build reference data (venues, squad pools)
-python scripts/build_reference_data.py
-
-# Run full ETL pipeline
-python scripts/build_data_pipeline.py
-
-# Run CI quality gate
-python scripts/check_gate.py
+# Backend tests
+cd api
+python -m pytest tests/ -v
 ```
 
 ---
 
-## Environment Variables
+## 📡 API Reference
 
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/health` | Health check |
+| `POST` | `/api/simulation/start` | Start session → optimal XI + win probability |
+| `GET` | `/api/simulation/{id}/status` | Poll session status |
+| `POST` | `/api/simulation/{id}/confirm-xi` | Confirm or override AI XI |
+| `POST` | `/api/match/recommend-xi` | Get recommended XI for a match |
+| `POST` | `/api/match/simulate` | Run Monte Carlo match simulation |
+| `POST` | `/api/match/result` | Record actual result for Platt calibration |
+| `GET` | `/api/tournament/path?team=CSK` | Max-flow tournament qualification path |
+| `GET` | `/api/tournament/analysis` | Full 10-team tournament analysis |
+| `GET` | `/api/stats/community` | Community-wide usage statistics |
+| `GET` | `/api/stats/system` | System health + Lambda metrics |
+
+Interactive API docs (when running locally): http://localhost:8000/docs
+
+---
+
+## 🔐 Environment Variables
+
+### Backend (Lambda / local)
 | Variable | Description |
 |---|---|
-| `DYNAMODB_TABLE` | DynamoDB sessions table name |
-| `S3_BUCKET` | S3 data bucket name |
-| `POSTHOG_KEY` | PostHog analytics API key |
-| `LINEAR_API_KEY` | Linear API key for error reporting (optional) |
+| `DYNAMODB_TABLE` | DynamoDB sessions table name (set by SAM) |
+| `S3_BUCKET` | S3 data bucket name (set by SAM) |
 | `ENVIRONMENT` | `staging` or `production` |
 | `LOG_LEVEL` | Logging level (default: `INFO`) |
+| `ANTHROPIC_API_KEY` | Claude API key for AI narrative (optional) |
+| `POSTHOG_KEY` | PostHog server-side key (optional) |
+| `LINEAR_API_KEY` | Linear API key for error ticket creation (optional) |
+
+### Frontend (Vite build)
+| Variable | Description |
+|---|---|
+| `VITE_API_URL` | Full AWS API Gateway base URL (leave empty to use local proxy) |
 
 ---
 
-## Development Notes
+## 📝 Development Notes
 
-- `lambda_package/` is a build artifact — do not commit it; it is regenerated by `sam build`
+- `lambda_package/` is a SAM build artifact — gitignored, regenerated by `sam build`
 - `node_modules/` is gitignored — run `npm install` after cloning
-- `data/` is gitignored — player tensors and match data are loaded from S3 in production
-- The ILP commentary Step 4 (Monte Carlo) is initially seeded at 0.5 win probability and updated by the Monte Carlo agent after simulation
-- Platt calibration activates after 3+ historical match results are recorded
+- `data/` is gitignored — tensors are loaded from S3 in production; use fallback values locally
+- `pandas` and `pyarrow` are intentionally excluded from `requirements.txt` — Lambda uses S3 JSON tensors instead of Parquet
+- `anthropic` (Claude SDK) is an optional dependency — narrative falls back to static text if not installed or API key not set
+- Platt calibration activates automatically after 3+ match results are recorded via `POST /api/match/result`
+- The ILP Step 4 (Monte Carlo) commentary is seeded at 0.5 win probability on first run; updated after full simulation completes

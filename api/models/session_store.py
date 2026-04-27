@@ -20,17 +20,17 @@ class SessionState:
     form_vec: Dict[str, float]  # player_id -> EWM form score
     calibration_log: List[Dict[str, float]]  # [{predicted, actual}]
     squad_fatigue: Dict[str, float]  # player_id -> fatigue score
-    matches_played: int = 0
     created_at: float
     expires_at: float
+    matches_played: int = 0
 
 
 class SessionStore:
     """DynamoDB session storage with TTL and form tracking."""
     
     def __init__(self):
-        self.table_name = os.environ.get("DYNAMODB_SESSIONS", "ipl-simulator-sessions")
-        self.counters_table = os.environ.get("DYNAMODB_COUNTERS", "ipl-simulator-counters")
+        self.table_name = os.environ.get("DYNAMODB_TABLE", os.environ.get("DYNAMODB_SESSIONS", "ipl-simulator-sessions"))
+        self.counters_table = os.environ.get("DYNAMODB_COUNTERS", self.table_name + "-counters")
         
         # Initialize DynamoDB clients
         self.dynamodb = boto3.resource('dynamodb')
@@ -40,8 +40,9 @@ class SessionStore:
         self.sessions_table = self.dynamodb.Table(self.table_name)
         self.counters_table = self.dynamodb.Table(self.counters_table)
         
-        # Initialize tables if they don't exist
-        self._ensure_tables_exist()
+        # Only auto-create tables when running locally (env var not set by SAM)
+        if not os.environ.get("DYNAMODB_TABLE"):
+            self._ensure_tables_exist()
     
     def _ensure_tables_exist(self) -> None:
         """Ensure DynamoDB tables exist with proper configuration."""

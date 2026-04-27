@@ -12,6 +12,7 @@ build/
 .aws-sam/
 *.toml
 !samconfig.toml
+!netlify.toml
 
 # Data files
 data/

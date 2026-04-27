@@ -14,12 +14,25 @@ class ConditionsAgent:
     """Computes venue vectors based on geometry and historical data."""
     
     def __init__(self):
-        # Load venue geometry data
+        # Load venue geometry data from disk, fall back to embedded defaults
         reference_dir = Path(__file__).parent.parent.parent / "data" / "reference"
         venue_geom_path = reference_dir / "venue_geometry.json"
-        
-        with open(venue_geom_path) as f:
-            self.venue_data = json.load(f)
+        try:
+            with open(venue_geom_path) as f:
+                self.venue_data = json.load(f)
+        except (FileNotFoundError, OSError):
+            self.venue_data = {
+                "venues": {
+                    "Wankhede Stadium": {"boundaries": {"straight": 72, "square": 63}},
+                    "M. A. Chidambaram Stadium": {"boundaries": {"straight": 75, "square": 65}},
+                    "Eden Gardens": {"boundaries": {"straight": 77, "square": 68}},
+                    "M. Chinnaswamy Stadium": {"boundaries": {"straight": 68, "square": 60}},
+                    "Narendra Modi Stadium": {"boundaries": {"straight": 78, "square": 68}},
+                    "Punjab Cricket Association Stadium": {"boundaries": {"straight": 70, "square": 61}},
+                    "Rajiv Gandhi International Stadium": {"boundaries": {"straight": 75, "square": 65}},
+                    "Sawai Mansingh Stadium": {"boundaries": {"straight": 75, "square": 65}},
+                }
+            }
         
         # Venue characteristics mapping
         self.venue_factors = {

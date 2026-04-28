@@ -12,6 +12,15 @@ on:
 jobs:
   test-backend:
     runs-on: ubuntu-latest
+    env:
+      # Routers eagerly instantiate boto3 SessionStore() at import time.
+      # Without these vars boto3 raises NoRegionError during pytest collection.
+      # The actual table/bucket aren't hit during tests (TestClient stays in-process).
+      AWS_DEFAULT_REGION: us-west-2
+      AWS_ACCESS_KEY_ID: testing
+      AWS_SECRET_ACCESS_KEY: testing
+      DYNAMODB_TABLE: ipl-kiro-sessions-test
+      S3_BUCKET: ipl-kiro-data-test
     steps:
       - uses: actions/checkout@v4
 
